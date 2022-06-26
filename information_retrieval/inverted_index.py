@@ -108,7 +108,16 @@ class InvertedIndexWriter(InvertedIndex):
             List of docIDs where the term appears
         """
         ### Begin your code
-
+        encoded_postings_list = self.postings_encoding.encode(postings_list)
+        self.postings_dict[term] = [
+            self.index_file.tell(),
+            len(postings_list),
+            len(encoded_postings_list)
+        ]
+        self.terms.append(term)
+        with open(self.metadata_file_path, 'wb') as f:
+            pkl.dump([self.postings_dict, self.terms], f)
+        self.index_file.write(encoded_postings_list)
         ### End your code
 
 
@@ -140,7 +149,12 @@ class InvertedIndexIterator(InvertedIndex):
         index file in memory.
         """
         ### Begin your code
-
+        term = next(self.term_iter) # raise StopIteration if reach end
+        start_pos, _, bytes_len = self.postings_dict[term]
+        self.index_file.seek(start_pos)
+        encoded_postings_list = self.index_file.read(bytes_len)
+        postings_list = self.postings_encoding.decode(encoded_postings_list)
+        return (term, postings_list)
         ### End your code
 
     def delete_from_disk(self):
@@ -172,5 +186,10 @@ class InvertedIndexMapper(InvertedIndex):
         corresponding to the postings list for the requested term.
         """
         ### Begin your code
-
+        if term not in self.terms:
+            return []
+        start_pos, _, bytes_len = self.postings_dict[term]
+        self.index_file.seek(start_pos)
+        encoded_postings_list = self.index_file.read(bytes_len)
+        return self.postings_encoding.decode(encoded_postings_list)
         ### End your code
